@@ -1170,11 +1170,6 @@ confirmCancelBtn.addEventListener("click", closeConfirmModal);
 confirmModalOverlay.addEventListener("click", closeConfirmModal);
 
 // Reader Functions
-let chapterGrantsCache = {};
-let activeChapterObserver = null;
-let activePageObserver = null;
-let infiniteScrollSentinelObserver = null;
-let isInfiniteLoadingNext = false;
 
 function openReader(manga, chapter, chapters) {
   document.body.style.overflow = "hidden";
