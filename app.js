@@ -8,7 +8,11 @@ const isLocalServer =
   window.location.hostname.endsWith(".local") ||
   window.location.port === "8080";
 
-const customProxyUrl = localStorage.getItem("custom-proxy-url") || "";
+const userProxyUrl = localStorage.getItem("custom-proxy-url") || "";
+
+const customProxyUrl = userProxyUrl 
+  ? userProxyUrl 
+  : (isLocalServer ? "" : "https://moetruyen.rinmyau.workers.dev");
 
 const API_BASE = customProxyUrl 
   ? customProxyUrl.replace(/\/$/, "") + "/api/v2"
