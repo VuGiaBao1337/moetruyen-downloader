@@ -1188,6 +1188,37 @@ body {
   padding: 0 1.5rem;
   z-index: 10;
   flex-shrink: 0;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+}
+
+.reader-view.ui-hidden .reader-header {
+  transform: translateY(-100%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Tap hint shown briefly when UI is hidden */
+.reader-tap-hint {
+  position: fixed;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%) translateY(10px);
+  background: rgba(0,0,0,0.65);
+  color: #fff;
+  font-size: 13px;
+  padding: 8px 18px;
+  border-radius: 20px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  z-index: 9999;
+  white-space: nowrap;
+  backdrop-filter: blur(6px);
+}
+
+.reader-tap-hint.visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
 }
 
 .reader-header-left {

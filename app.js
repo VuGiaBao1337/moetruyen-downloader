@@ -1212,11 +1212,18 @@ function openReader(manga, chapter, chapters) {
   readerThemeSelect.value = theme;
   readerView.className = `reader-view active ${theme}`;
   loadReaderChapter(chapter);
+  // Start auto-hide timer when reader opens
+  showReaderUi();
 }
 
 function closeReader() {
   document.body.style.overflow = "";
   const theme = localStorage.getItem("reader-theme") || "theme-dark";
+  // Reset UI visibility state on close
+  readerUiHidden = false;
+  if (autoHideTimer) clearTimeout(autoHideTimer);
+  if (tapHintTimer) clearTimeout(tapHintTimer);
+  if (readerTapHint) readerTapHint.classList.remove("visible");
   readerView.className = `reader-view ${theme}`;
   cleanupReaderMemory();
   currentReadingManga = null;
@@ -1854,6 +1861,90 @@ readerThemeSelect.addEventListener("change", () => {
   readerView.className = `reader-view active ${selected}`;
   localStorage.setItem("reader-theme", selected);
 });
+
+// ── Reader UI Auto-hide (double-tap center to toggle) ──────────────────────
+const readerTapHint = document.getElementById("reader-tap-hint");
+let readerUiHidden = false;
+let tapHintTimer = null;
+let lastTapTime = 0;
+let autoHideTimer = null;
+
+function showReaderUi() {
+  readerUiHidden = false;
+  readerView.classList.remove("ui-hidden");
+  resetAutoHide();
+}
+
+function hideReaderUi() {
+  readerUiHidden = true;
+  readerView.classList.add("ui-hidden");
+  showTapHint();
+  if (autoHideTimer) clearTimeout(autoHideTimer);
+}
+
+function showTapHint() {
+  if (!readerTapHint) return;
+  readerTapHint.classList.add("visible");
+  if (tapHintTimer) clearTimeout(tapHintTimer);
+  tapHintTimer = setTimeout(() => {
+    readerTapHint.classList.remove("visible");
+  }, 2000);
+}
+
+function resetAutoHide() {
+  if (autoHideTimer) clearTimeout(autoHideTimer);
+  // Auto-hide after 4 seconds of no interaction
+  autoHideTimer = setTimeout(() => {
+    if (readerView.classList.contains("active")) {
+      hideReaderUi();
+    }
+  }, 4000);
+}
+
+// Touch: double-tap center 1/3 of screen to toggle
+readerView.addEventListener("touchend", (e) => {
+  const now = Date.now();
+  const touch = e.changedTouches[0];
+  const screenW = window.innerWidth;
+  const screenH = window.innerHeight;
+  // Only trigger for taps in the center horizontal third
+  const inCenterX = touch.clientX > screenW * 0.25 && touch.clientX < screenW * 0.75;
+  const inCenterY = touch.clientY > screenH * 0.2 && touch.clientY < screenH * 0.8;
+
+  if (inCenterX && inCenterY) {
+    if (now - lastTapTime < 320) {
+      // Double-tap detected
+      if (readerUiHidden) {
+        showReaderUi();
+      } else {
+        hideReaderUi();
+      }
+      lastTapTime = 0;
+    } else {
+      lastTapTime = now;
+      // Single tap: if hidden, show the hint
+      if (readerUiHidden) {
+        showTapHint();
+      }
+    }
+  } else {
+    // Tap outside center area (e.g. on header buttons) — show UI
+    if (readerUiHidden) showReaderUi();
+  }
+}, { passive: true });
+
+// Mouse click (PC): single click center to toggle
+readerContentArea.addEventListener("click", (e) => {
+  // Don't trigger if clicking on interactive elements
+  if (e.target.closest("button, select, a, input")) return;
+  const screenW = window.innerWidth;
+  const inCenterX = e.clientX > screenW * 0.25 && e.clientX < screenW * 0.75;
+  if (inCenterX) {
+    if (readerUiHidden) showReaderUi(); else hideReaderUi();
+  }
+});
+
+
 
 // Reading History Functions
 function saveReadingProgress(manga, chapter) {
