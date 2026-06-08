@@ -7,9 +7,22 @@ const isLocalServer =
   window.location.hostname.startsWith("172.") || 
   window.location.hostname.endsWith(".local") ||
   window.location.port === "8080";
-const API_BASE = isLocalServer ? "/api/v2" : "https://moe.suicaodex.com/v2";
+
+const customProxyUrl = localStorage.getItem("custom-proxy-url") || "";
+
+const API_BASE = customProxyUrl 
+  ? customProxyUrl.replace(/\/$/, "") + "/api/v2"
+  : (isLocalServer ? "/api/v2" : "https://moe.suicaodex.com/v2");
 
 function getProxiedUrl(originalUrl) {
+  if (customProxyUrl) {
+    if (originalUrl && originalUrl.startsWith("https://")) {
+      const withoutHttps = originalUrl.substring(8);
+      return customProxyUrl.replace(/\/$/, "") + "/proxy/" + withoutHttps;
+    }
+    return originalUrl;
+  }
+
   if (!isLocalServer) return originalUrl;
 
   if (originalUrl && originalUrl.startsWith("https://")) {
@@ -1980,4 +1993,22 @@ clearHistoryBtn.addEventListener("click", () => {
   if (readerThemeSelect) readerThemeSelect.value = theme;
   if (readerView) readerView.className = `reader-view ${theme}`;
   renderRecentReading();
+
+  // Initialize Custom Proxy input
+  const proxyInput = document.getElementById("proxy-input");
+  if (proxyInput) {
+    proxyInput.value = localStorage.getItem("custom-proxy-url") || "";
+    proxyInput.addEventListener("change", () => {
+      const value = proxyInput.value.trim();
+      if (value) {
+        localStorage.setItem("custom-proxy-url", value);
+      } else {
+        localStorage.removeItem("custom-proxy-url");
+      }
+      log("Đã cập nhật Proxy/API Base. Đang làm mới trang...", "system");
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    });
+  }
 })();
