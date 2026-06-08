@@ -1,5 +1,5 @@
 
-const isLocalServer = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+const isLocalServer = window.location.protocol.startsWith("http");
 const API_BASE = isLocalServer ? "/api/v2" : "https://moe.suicaodex.com/v2";
 
 function getProxiedUrl(originalUrl) {
