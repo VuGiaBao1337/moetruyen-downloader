@@ -83,50 +83,10 @@ const confirmChaptersList = document.getElementById("confirm-chapters-list");
 const modalConcurrencySelect = document.getElementById("modal-concurrency-select");
 const modalFormatSelect = document.getElementById("modal-format-select");
 
-// Reader UI Elements
-const readerView = document.getElementById("manga-reader-view");
-const readerBackBtn = document.getElementById("reader-back-btn");
-const readerMangaTitle = document.getElementById("reader-manga-title");
-const readerChapterTitle = document.getElementById("reader-chapter-title");
-const readerPrevChapterBtn = document.getElementById("reader-prev-chapter-btn");
-const readerNextChapterBtn = document.getElementById("reader-next-chapter-btn");
-const readerChapterSelect = document.getElementById("reader-chapter-select");
-const readerModeScrollBtn = document.getElementById("reader-mode-scroll-btn");
-const readerModePageBtn = document.getElementById("reader-mode-page-btn");
-const readerContentArea = document.getElementById("reader-content-area");
-const readerLoader = document.getElementById("reader-loader");
-const readerLoaderText = document.getElementById("reader-loader-text");
-const readerPagesScroll = document.getElementById("reader-pages-scroll");
-const readerPagesFlip = document.getElementById("reader-pages-flip");
-const flipPrevBtn = document.getElementById("flip-prev-btn");
-const flipNextBtn = document.getElementById("flip-next-btn");
-const flipImage = document.getElementById("flip-image");
-const flipPageIndicator = document.getElementById("flip-page-indicator");
-const readerThemeSelect = document.getElementById("reader-theme-select");
-const recentSection = document.getElementById("recent-reading-section");
-const recentGrid = document.getElementById("recent-reading-grid");
-const clearHistoryBtn = document.getElementById("clear-history-btn");
-
 let searchResults = [];
 let selectedManga = null;
 let activeDownloads = [];
 let queueIdCounter = 0;
-
-// Reader State
-let currentReadingManga = null;
-let currentReadingChapter = null;
-let activeChapterObserver = null;
-let activePageObserver = null;
-let infiniteScrollSentinelObserver = null;
-let isInfiniteLoadingNext = false;
-let chapterGrantsCache = {};
-let currentReadingChapterList = [];
-let currentReadingPageUrls = [];
-let currentReadingDecryptedPages = {}; // pageIndex -> ObjectURL
-let currentReadingPageIndex = 0;
-let currentReadingMode = "scroll"; // scroll or page
-let isImgxDecryptionRequiredGlobal = false;
-let currentReadingPageGrantsGlobal = {};
 
 
 function log(message, type = "info") {
@@ -166,7 +126,7 @@ class CrawlerQueue {
 
 
     if (this.queue.some(item => item.chapter.id === chapter.id)) {
-      log(`Chapter ${chapter.numberText} đang được tải hoặc đã có trong hàng chờ.`, "warning");
+      log(`Chapter ${chapter.numberText} Ä‘ang Ä‘Æ°á»£c táº£i hoáº·c Ä‘Ã£ cÃ³ trong hÃ ng chá».`, "warning");
       return;
     }
 
@@ -182,7 +142,7 @@ class CrawlerQueue {
     };
 
     this.queue.push(queueItem);
-    log(`Đã thêm vào hàng chờ: ${manga.title} - Chapter ${chapter.numberText}`, "system");
+    log(`ÄÃ£ thÃªm vÃ o hÃ ng chá»: ${manga.title} - Chapter ${chapter.numberText}`, "system");
 
     this.render();
     this.process();
@@ -201,14 +161,14 @@ class CrawlerQueue {
     this.activeCount++;
     this.render();
 
-    log(`Bắt đầu tải: ${nextItem.manga.title} - Chapter ${nextItem.chapter.numberText}`, "info");
+    log(`Báº¯t Ä‘áº§u táº£i: ${nextItem.manga.title} - Chapter ${nextItem.chapter.numberText}`, "info");
 
     this.downloadChapter(nextItem)
       .then(() => {
         nextItem.status = "completed";
         nextItem.progress = 100;
         this.activeCount--;
-        log(`Tải thành công & Lưu file ZIP: ${nextItem.manga.title} - Chapter ${nextItem.chapter.numberText}`, "success");
+        log(`Táº£i thÃ nh cÃ´ng & LÆ°u file ZIP: ${nextItem.manga.title} - Chapter ${nextItem.chapter.numberText}`, "success");
         this.render();
         this.process();
       })
@@ -216,7 +176,7 @@ class CrawlerQueue {
         nextItem.status = "failed";
         nextItem.error = err.message || err;
         this.activeCount--;
-        log(`Lỗi khi tải Chapter ${nextItem.chapter.numberText}: ${nextItem.error}`, "error");
+        log(`Lá»—i khi táº£i Chapter ${nextItem.chapter.numberText}: ${nextItem.error}`, "error");
         this.render();
         this.process();
       });
@@ -227,14 +187,14 @@ class CrawlerQueue {
     const res = await fetch(`${API_BASE}/chapters/${item.chapter.id}`);
     if (!res.ok) {
       if (res.status === 403) {
-        throw new Error("Chapter bị khóa (yêu cầu mật khẩu hoặc quyền truy cập đặc biệt).");
+        throw new Error("Chapter bá»‹ khÃ³a (yÃªu cáº§u máº­t kháº©u hoáº·c quyá»n truy cáº­p Ä‘áº·c biá»‡t).");
       }
-      throw new Error(`Lỗi HTTP ${res.status} khi lấy danh sách trang.`);
+      throw new Error(`Lá»—i HTTP ${res.status} khi láº¥y danh sÃ¡ch trang.`);
     }
 
     const payload = await res.json();
     if (!payload.success || !payload.data || !payload.data.pageUrls) {
-      throw new Error("Không lấy được danh sách URL trang từ API.");
+      throw new Error("KhÃ´ng láº¥y Ä‘Æ°á»£c danh sÃ¡ch URL trang tá»« API.");
     }
 
     const pageUrls = payload.data.pageUrls;
@@ -242,7 +202,7 @@ class CrawlerQueue {
     this.render();
 
     if (pageUrls.length === 0) {
-      throw new Error("Chapter này không có trang ảnh nào.");
+      throw new Error("Chapter nÃ y khÃ´ng cÃ³ trang áº£nh nÃ o.");
     }
 
 
@@ -254,7 +214,7 @@ class CrawlerQueue {
     let isImgxDecryptionRequired = false;
 
     if (isImgx) {
-      log("Chương truyện sử dụng định dạng IMGX bảo mật. Đang lấy khóa giải mã...", "info");
+      log("ChÆ°Æ¡ng truyá»‡n sá»­ dá»¥ng Ä‘á»‹nh dáº¡ng IMGX báº£o máº­t. Äang láº¥y khÃ³a giáº£i mÃ£...", "info");
       try {
 
         const firstGrantRes = await fetch(`${API_BASE}/chapters/${item.chapter.id}/page-access`, {
@@ -280,7 +240,7 @@ class CrawlerQueue {
               remainingIndexes.push(i);
             }
 
-            log(`Đã xác thực IMGX. Đang lấy khóa giải mã cho ${remainingIndexes.length} trang còn lại (kích thước nhóm: ${maxWindow})...`, "info");
+            log(`ÄÃ£ xÃ¡c thá»±c IMGX. Äang láº¥y khÃ³a giáº£i mÃ£ cho ${remainingIndexes.length} trang cÃ²n láº¡i (kÃ­ch thÆ°á»›c nhÃ³m: ${maxWindow})...`, "info");
 
             for (let i = 0; i < remainingIndexes.length; i += maxWindow) {
               const batch = remainingIndexes.slice(i, i + maxWindow);
@@ -291,7 +251,7 @@ class CrawlerQueue {
               });
 
               if (!batchRes.ok) {
-                throw new Error(`Lỗi HTTP ${batchRes.status} khi lấy khóa giải mã trang.`);
+                throw new Error(`Lá»—i HTTP ${batchRes.status} khi láº¥y khÃ³a giáº£i mÃ£ trang.`);
               }
 
               const batchPayload = await batchRes.json();
@@ -301,15 +261,15 @@ class CrawlerQueue {
                 });
               }
             }
-            log("Đã tải xong toàn bộ khóa giải mã IMGX.", "success");
+            log("ÄÃ£ táº£i xong toÃ n bá»™ khÃ³a giáº£i mÃ£ IMGX.", "success");
           }
         } else if (firstGrantRes.status === 404) {
-          log("Chương không sử dụng mã hóa IMGX (hoặc đã mở khóa công khai). Bỏ qua giải mã.", "warning");
+          log("ChÆ°Æ¡ng khÃ´ng sá»­ dá»¥ng mÃ£ hÃ³a IMGX (hoáº·c Ä‘Ã£ má»Ÿ khÃ³a cÃ´ng khai). Bá» qua giáº£i mÃ£.", "warning");
         } else {
-          throw new Error(`Lỗi HTTP ${firstGrantRes.status} khi bắt đầu xác thực IMGX.`);
+          throw new Error(`Lá»—i HTTP ${firstGrantRes.status} khi báº¯t Ä‘áº§u xÃ¡c thá»±c IMGX.`);
         }
       } catch (err) {
-        log(`Cảnh báo xác thực IMGX thất bại: ${err.message}. Thử tải trực tiếp...`, "warning");
+        log(`Cáº£nh bÃ¡o xÃ¡c thá»±c IMGX tháº¥t báº¡i: ${err.message}. Thá»­ táº£i trá»±c tiáº¿p...`, "warning");
       }
     }
 
@@ -347,7 +307,7 @@ class CrawlerQueue {
               const scriptText = new TextDecoder().decode(uint8);
               const match = scriptText.match(/window\.pages\.push\(\s*["'`](data:[^"'`]+)["'`]\s*\)/);
               if (!match) {
-                throw new Error("Dữ liệu tải về không chứa chữ ký IMGX và không phải JS Base64.");
+                throw new Error("Dá»¯ liá»‡u táº£i vá» khÃ´ng chá»©a chá»¯ kÃ½ IMGX vÃ  khÃ´ng pháº£i JS Base64.");
               }
               blob = dataURLtoBlob(match[1]);
             }
@@ -368,7 +328,7 @@ class CrawlerQueue {
           }
           success = true;
         } catch (err) {
-          log(`Lỗi tải trang ${i + 1}/${pageUrls.length} (Lần thử ${attempt}/3): ${err.message}`, "warning");
+          log(`Lá»—i táº£i trang ${i + 1}/${pageUrls.length} (Láº§n thá»­ ${attempt}/3): ${err.message}`, "warning");
           if (attempt >= 3) throw err;
 
           await new Promise(r => setTimeout(r, 1000));
@@ -385,7 +345,7 @@ class CrawlerQueue {
           finalBlob = await convertToPngBlob(blob);
           extension = ".png";
         } catch (err) {
-          log(`Lỗi convert PNG trang ${i + 1}/${pageUrls.length}: ${err.message}. Giữ định dạng gốc.`, "warning");
+          log(`Lá»—i convert PNG trang ${i + 1}/${pageUrls.length}: ${err.message}. Giá»¯ Ä‘á»‹nh dáº¡ng gá»‘c.`, "warning");
           extension = blob.type === "image/png" ? ".png" : (blob.type === "image/jpeg" ? ".jpg" : ".webp");
         }
       } else {
@@ -404,7 +364,7 @@ class CrawlerQueue {
 
     item.status = "zipping";
     this.render();
-    log(`Đang nén file ZIP: ${item.manga.title} - Chapter ${item.chapter.numberText}...`, "info");
+    log(`Äang nÃ©n file ZIP: ${item.manga.title} - Chapter ${item.chapter.numberText}...`, "info");
 
     const zipBlob = await zip.generateAsync({ type: "blob" });
     const cleanMangaTitle = item.manga.title.replace(/[\\/:*?"<>|]/g, "");
@@ -416,7 +376,7 @@ class CrawlerQueue {
       queueItemsContainer.innerHTML = `
         <div class="empty-queue-msg">
           <i class="fa-solid fa-box-open"></i>
-          <p>Không có lượt tải nào đang chạy</p>
+          <p>KhÃ´ng cÃ³ lÆ°á»£t táº£i nÃ o Ä‘ang cháº¡y</p>
         </div>
       `;
       queueBadge.style.display = "none";
@@ -433,11 +393,11 @@ class CrawlerQueue {
     }
 
     queueItemsContainer.innerHTML = this.queue.map(item => {
-      let statusText = "Chờ tải";
-      if (item.status === "downloading") statusText = `Đang tải (${item.pagesDownloaded}/${item.totalPages})`;
-      if (item.status === "zipping") statusText = "Đang nén ZIP";
-      if (item.status === "completed") statusText = "Đã xong";
-      if (item.status === "failed") statusText = "Thất bại";
+      let statusText = "Chá» táº£i";
+      if (item.status === "downloading") statusText = `Äang táº£i (${item.pagesDownloaded}/${item.totalPages})`;
+      if (item.status === "zipping") statusText = "Äang nÃ©n ZIP";
+      if (item.status === "completed") statusText = "ÄÃ£ xong";
+      if (item.status === "failed") statusText = "Tháº¥t báº¡i";
 
       return `
         <div class="queue-item ${item.status}" id="queue-item-${item.id}">
@@ -452,10 +412,10 @@ class CrawlerQueue {
             <div class="queue-progress-fill" style="width: ${item.progress}%"></div>
           </div>
           <div class="queue-progress-text">
-            <span>Tiến độ</span>
+            <span>Tiáº¿n Ä‘á»™</span>
             <span>${item.progress}%</span>
           </div>
-          ${item.error ? `<div style="font-size: 0.75rem; color: var(--danger); margin-top: 4px;"><i class="fa-solid fa-circle-exclamation"></i> Lỗi: ${item.error}</div>` : ""}
+          ${item.error ? `<div style="font-size: 0.75rem; color: var(--danger); margin-top: 4px;"><i class="fa-solid fa-circle-exclamation"></i> Lá»—i: ${item.error}</div>` : ""}
         </div>
       `;
     }).join("");
@@ -797,17 +757,17 @@ async function searchManga(query) {
 
     const payload = await res.json();
     if (!payload.success || !payload.data) {
-      throw new Error("Không có dữ liệu phản hồi từ máy chủ.");
+      throw new Error("KhÃ´ng cÃ³ dá»¯ liá»‡u pháº£n há»“i tá»« mÃ¡y chá»§.");
     }
 
     searchResults = payload.data;
     renderMangaGrid(searchResults);
   } catch (err) {
-    log(`Lỗi tìm kiếm: ${err.message}`, "error");
+    log(`Lá»—i tÃ¬m kiáº¿m: ${err.message}`, "error");
     mangaGrid.innerHTML = `
       <div class="empty-queue-msg" style="grid-column: 1/-1; color: var(--danger)">
         <i class="fa-solid fa-circle-exclamation"></i>
-        <p>Lỗi kết nối API: ${err.message}</p>
+        <p>Lá»—i káº¿t ná»‘i API: ${err.message}</p>
       </div>
     `;
   } finally {
@@ -818,13 +778,13 @@ async function searchManga(query) {
 
 function renderMangaGrid(mangaList) {
   resultsHeader.style.display = "flex";
-  resultsCountText.innerText = `Tìm thấy ${mangaList.length} truyện`;
+  resultsCountText.innerText = `TÃ¬m tháº¥y ${mangaList.length} truyá»‡n`;
 
   if (mangaList.length === 0) {
     mangaGrid.innerHTML = `
       <div class="empty-queue-msg" style="grid-column: 1/-1">
         <i class="fa-solid fa-circle-question"></i>
-        <p>Không tìm thấy truyện nào khớp với từ khóa tìm kiếm</p>
+        <p>KhÃ´ng tÃ¬m tháº¥y truyá»‡n nÃ o khá»›p vá»›i tá»« khÃ³a tÃ¬m kiáº¿m</p>
       </div>
     `;
     return;
@@ -832,7 +792,7 @@ function renderMangaGrid(mangaList) {
 
   mangaGrid.innerHTML = mangaList.map(manga => {
     const statusClass = manga.status === "ongoing" ? "ongoing" : "completed";
-    const statusText = manga.status === "ongoing" ? "Đang tiến hành" : "Hoàn thành";
+    const statusText = manga.status === "ongoing" ? "Äang tiáº¿n hÃ nh" : "HoÃ n thÃ nh";
 
     let coverSrc = manga.coverUrl || "https://placehold.co/200x280/161e31/ffffff?text=No+Cover";
 
@@ -845,10 +805,10 @@ function renderMangaGrid(mangaList) {
         <div class="card-details">
           <h3 class="card-title" title="${manga.title}">${manga.title}</h3>
           <div class="card-info">
-            <span class="card-author" title="${manga.author || 'Chưa cập nhật'}">
-              <i class="fa-solid fa-user"></i> ${manga.author || 'Ẩn danh'}
+            <span class="card-author" title="${manga.author || 'ChÆ°a cáº­p nháº­t'}">
+              <i class="fa-solid fa-user"></i> ${manga.author || 'áº¨n danh'}
             </span>
-            <span class="card-chapters-count">${manga.chapterCount || 0} chương</span>
+            <span class="card-chapters-count">${manga.chapterCount || 0} chÆ°Æ¡ng</span>
           </div>
         </div>
       </div>
@@ -879,7 +839,7 @@ async function fetchAllChapters(mangaId) {
 
     const payload = await res.json();
     if (!payload.success || !payload.data) {
-      throw new Error("Không thể tải danh sách chương.");
+      throw new Error("KhÃ´ng thá»ƒ táº£i danh sÃ¡ch chÆ°Æ¡ng.");
     }
 
     const data = payload.data;
@@ -906,7 +866,7 @@ async function showMangaDetails(manga) {
   drawerContent.innerHTML = `
     <div class="loader-container">
       <div class="spinner"></div>
-      <p>Đang tải danh sách chương truyện...</p>
+      <p>Äang táº£i danh sÃ¡ch chÆ°Æ¡ng truyá»‡n...</p>
     </div>
   `;
 
@@ -928,48 +888,47 @@ async function showMangaDetails(manga) {
         <img src="${coverSrc}" class="drawer-cover" alt="${manga.title}">
         <div class="drawer-details-info">
           <h2 class="drawer-title">${manga.title}</h2>
-          <div class="drawer-author-meta"><i class="fa-solid fa-user-pen"></i> Tác giả: <strong>${manga.author || 'Chưa rõ'}</strong></div>
-          <div class="drawer-author-meta"><i class="fa-solid fa-folder"></i> Nhóm dịch: <strong>${manga.groupName || 'Không có'}</strong></div>
+          <div class="drawer-author-meta"><i class="fa-solid fa-user-pen"></i> TÃ¡c giáº£: <strong>${manga.author || 'ChÆ°a rÃµ'}</strong></div>
+          <div class="drawer-author-meta"><i class="fa-solid fa-folder"></i> NhÃ³m dá»‹ch: <strong>${manga.groupName || 'KhÃ´ng cÃ³'}</strong></div>
           <div class="drawer-status-meta">
-            <span class="tag"><i class="fa-solid fa-list-ol"></i> ${chapters.length} chương</span>
-            <span class="tag"><i class="fa-solid fa-clock"></i> Cập nhật: ${new Date(manga.updatedAt).toLocaleDateString("vi-VN")}</span>
+            <span class="tag"><i class="fa-solid fa-list-ol"></i> ${chapters.length} chÆ°Æ¡ng</span>
+            <span class="tag"><i class="fa-solid fa-clock"></i> Cáº­p nháº­t: ${new Date(manga.updatedAt).toLocaleDateString("vi-VN")}</span>
           </div>
         </div>
       </div>
 
       <div class="manga-desc">
-        <strong>Tóm tắt nội dung:</strong><br>
-        ${manga.description || 'Không có tóm tắt nội dung cho tác phẩm này.'}
+        <strong>TÃ³m táº¯t ná»™i dung:</strong><br>
+        ${manga.description || 'KhÃ´ng cÃ³ tÃ³m táº¯t ná»™i dung cho tÃ¡c pháº©m nÃ y.'}
       </div>
 
       <div class="chapters-action-bar">
-        <h4>Danh sách chương (${chapters.length})</h4>
+        <h4>Danh sÃ¡ch chÆ°Æ¡ng (${chapters.length})</h4>
         <div class="select-actions">
-          <input type="text" id="chapter-filter-input" placeholder="Lọc chương..." class="chapter-filter-input">
-          <button id="select-all-chapters" class="btn btn-secondary btn-small">Chọn hết</button>
-          <button id="deselect-all-chapters" class="btn btn-secondary btn-small">Bỏ chọn</button>
+          <input type="text" id="chapter-filter-input" placeholder="Lá»c chÆ°Æ¡ng..." class="chapter-filter-input">
+          <button id="select-all-chapters" class="btn btn-secondary btn-small">Chá»n háº¿t</button>
+          <button id="deselect-all-chapters" class="btn btn-secondary btn-small">Bá» chá»n</button>
         </div>
       </div>
 
       <div class="chapter-list-wrapper">
-        ${chapters.length === 0 ? '<p style="color: var(--text-muted); text-align: center; padding: 2rem;">Không tìm thấy chương truyện công khai nào.</p>' :
+        ${chapters.length === 0 ? '<p style="color: var(--text-muted); text-align: center; padding: 2rem;">KhÃ´ng tÃ¬m tháº¥y chÆ°Æ¡ng truyá»‡n cÃ´ng khai nÃ o.</p>' :
           chapters.map(ch => {
             const isPublic = ch.access === "public";
             const accessBadgeClass = isPublic ? "public" : "locked";
-            const accessBadgeText = isPublic ? "Public" : "Bị khóa";
+            const accessBadgeText = isPublic ? "Public" : "Bá»‹ khÃ³a";
 
             return `
               <div class="chapter-row" data-chapter-id="${ch.id}">
                 <div class="chapter-row-left">
                   <input type="checkbox" class="chapter-checkbox" data-id="${ch.id}" ${isPublic ? '' : 'disabled'}>
-                  <span class="chapter-num">Chương ${ch.numberText}</span>
+                  <span class="chapter-num">ChÆ°Æ¡ng ${ch.numberText}</span>
                   <span class="chapter-title" title="${ch.title || ''}">${ch.title ? `- ${ch.title}` : ''}</span>
                 </div>
                 <div class="chapter-row-right">
-                  <span class="chapter-pages">${ch.pages ? `${ch.pages} trang` : 'Không rõ trang'}</span>
+                  <span class="chapter-pages">${ch.pages ? `${ch.pages} trang` : 'KhÃ´ng rÃµ trang'}</span>
                   <div class="chapter-row-actions">
                     <span class="chapter-badge ${accessBadgeClass}">${accessBadgeText}</span>
-                    ${isPublic ? `<button class="btn-read-chapter" data-id="${ch.id}"><i class="fa-solid fa-book-open"></i> Đọc</button>` : ''}
                   </div>
                 </div>
               </div>
@@ -980,7 +939,7 @@ async function showMangaDetails(manga) {
 
       <div class="drawer-actions">
         <button id="download-selected-btn" class="btn btn-primary" ${chapters.length === 0 ? 'disabled' : ''}>
-          <i class="fa-solid fa-download"></i> Tải các chương đã chọn
+          <i class="fa-solid fa-download"></i> Táº£i cÃ¡c chÆ°Æ¡ng Ä‘Ã£ chá»n
         </button>
       </div>
     `;
@@ -988,26 +947,12 @@ async function showMangaDetails(manga) {
 
     document.querySelectorAll(".chapter-row").forEach(row => {
       row.addEventListener("click", (e) => {
-
-        if (e.target.classList.contains("chapter-checkbox") || e.target.closest(".btn-read-chapter")) return;
-
+        if (e.target.classList.contains("chapter-checkbox")) return;
         const cb = row.querySelector(".chapter-checkbox");
-        if (cb && !cb.disabled) {
-          cb.checked = !cb.checked;
-        }
+        if (cb && !cb.disabled) { cb.checked = !cb.checked; }
       });
     });
 
-    document.querySelectorAll(".btn-read-chapter").forEach(btn => {
-      btn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        const chId = parseInt(btn.dataset.id, 10);
-        const chapter = chapters.find(c => c.id === chId);
-        if (chapter) {
-          openReader(selectedManga, chapter, chapters);
-        }
-      });
-    });
 
     const filterInput = document.getElementById("chapter-filter-input");
     filterInput.addEventListener("input", () => {
@@ -1035,7 +980,7 @@ async function showMangaDetails(manga) {
     document.getElementById("download-selected-btn").addEventListener("click", () => {
       const checkedBoxes = document.querySelectorAll(".chapter-checkbox:checked");
       if (checkedBoxes.length === 0) {
-        alert("Vui lòng chọn ít nhất một chương truyện công khai để tải!");
+        alert("Vui lÃ²ng chá»n Ã­t nháº¥t má»™t chÆ°Æ¡ng truyá»‡n cÃ´ng khai Ä‘á»ƒ táº£i!");
         return;
       }
 
@@ -1052,11 +997,11 @@ async function showMangaDetails(manga) {
     });
 
   } catch (err) {
-    log(`Lỗi lấy danh sách chương: ${err.message}`, "error");
+    log(`Lá»—i láº¥y danh sÃ¡ch chÆ°Æ¡ng: ${err.message}`, "error");
     drawerContent.innerHTML = `
       <div class="empty-queue-msg" style="color: var(--danger)">
         <i class="fa-solid fa-circle-exclamation"></i>
-        <p>Lỗi tải danh sách chương: ${err.message}</p>
+        <p>Lá»—i táº£i danh sÃ¡ch chÆ°Æ¡ng: ${err.message}</p>
       </div>
     `;
   }
@@ -1096,7 +1041,7 @@ clearLogsBtn.addEventListener("click", () => {
 });
 
 concurrencySelect.addEventListener("change", () => {
-  log(`Thay đổi cài đặt tải song song: ${concurrencySelect.value} chapter(s).`, "system");
+  log(`Thay Ä‘á»•i cÃ i Ä‘áº·t táº£i song song: ${concurrencySelect.value} chapter(s).`, "system");
   downloadQueue.process();
 });
 
@@ -1107,7 +1052,7 @@ function convertToPngBlob(imageBlob) {
 
     const timeoutId = setTimeout(() => {
       URL.revokeObjectURL(url);
-      reject(new Error("Timeout khi chuyển đổi sang PNG."));
+      reject(new Error("Timeout khi chuyá»ƒn Ä‘á»•i sang PNG."));
     }, 15000);
 
     img.onload = () => {
@@ -1123,7 +1068,7 @@ function convertToPngBlob(imageBlob) {
           if (pngBlob) {
             resolve(pngBlob);
           } else {
-            reject(new Error("canvas.toBlob trả về null."));
+            reject(new Error("canvas.toBlob tráº£ vá» null."));
           }
         }, "image/png");
       } catch (err) {
@@ -1134,7 +1079,7 @@ function convertToPngBlob(imageBlob) {
     img.onerror = () => {
       clearTimeout(timeoutId);
       URL.revokeObjectURL(url);
-      reject(new Error("Không thể load hình ảnh vào canvas. Định dạng ảnh có thể không hợp lệ."));
+      reject(new Error("KhÃ´ng thá»ƒ load hÃ¬nh áº£nh vÃ o canvas. Äá»‹nh dáº¡ng áº£nh cÃ³ thá»ƒ khÃ´ng há»£p lá»‡."));
     };
 
     img.src = url;
@@ -1143,12 +1088,12 @@ function convertToPngBlob(imageBlob) {
 
 function showConfirmDownloadModal(manga, selectedChapters) {
   confirmMangaTitle.innerText = manga.title;
-  confirmChaptersCount.innerText = `Đã chọn ${selectedChapters.length} chương truyện`;
+  confirmChaptersCount.innerText = `ÄÃ£ chá»n ${selectedChapters.length} chÆ°Æ¡ng truyá»‡n`;
 
   confirmChaptersList.innerHTML = selectedChapters.map(ch => `
     <div class="confirm-chapter-item">
       <i class="fa-solid fa-file-image"></i>
-      <span>Chương ${ch.numberText} ${ch.title ? `- ${ch.title}` : ''}</span>
+      <span>ChÆ°Æ¡ng ${ch.numberText} ${ch.title ? `- ${ch.title}` : ''}</span>
     </div>
   `).join("");
 
@@ -1167,7 +1112,7 @@ function showConfirmDownloadModal(manga, selectedChapters) {
     formatSelect.value = modalFormatSelect.value;
 
 
-    log(`Bắt đầu tiến trình tải. Cài đặt: ${concurrencySelect.value} chapter(s) song song, Định dạng: ${formatSelect.value.toUpperCase()}`, "system");
+    log(`Báº¯t Ä‘áº§u tiáº¿n trÃ¬nh táº£i. CÃ i Ä‘áº·t: ${concurrencySelect.value} chapter(s) song song, Äá»‹nh dáº¡ng: ${formatSelect.value.toUpperCase()}`, "system");
 
 
     selectedChapters.forEach(chapter => {
@@ -1194,904 +1139,8 @@ function closeConfirmModal() {
 confirmModalCloseBtn.addEventListener("click", closeConfirmModal);
 confirmCancelBtn.addEventListener("click", closeConfirmModal);
 confirmModalOverlay.addEventListener("click", closeConfirmModal);
-
-// Reader Functions
-
-function openReader(manga, chapter, chapters) {
-  document.body.style.overflow = "hidden";
-  currentReadingManga = manga;
-  currentReadingChapter = chapter;
-  currentReadingChapterList = chapters.filter(ch => ch.access === "public");
-
-  readerChapterSelect.innerHTML = currentReadingChapterList.map(ch => `
-    <option value="${ch.id}">${ch.numberText ? `Chương ${ch.numberText}` : 'Không rõ số'} ${ch.title ? `- ${ch.title}` : ''}</option>
-  `).join("");
-  readerChapterSelect.value = chapter.id;
-
-  const theme = localStorage.getItem("reader-theme") || "theme-dark";
-  readerThemeSelect.value = theme;
-  readerView.className = `reader-view active ${theme}`;
-  loadReaderChapter(chapter);
-  // Start auto-hide timer when reader opens
-  showReaderUi();
-}
-
-function closeReader() {
-  document.body.style.overflow = "";
-  const theme = localStorage.getItem("reader-theme") || "theme-dark";
-  // Reset UI visibility state on close
-  readerUiHidden = false;
-  if (autoHideTimer) clearTimeout(autoHideTimer);
-  if (tapHintTimer) clearTimeout(tapHintTimer);
-  if (readerTapHint) readerTapHint.classList.remove("visible");
-  readerView.className = `reader-view ${theme}`;
-  cleanupReaderMemory();
-  currentReadingManga = null;
-  currentReadingChapter = null;
-  currentReadingChapterList = [];
-  currentReadingPageUrls = [];
-  if (activeChapterObserver) activeChapterObserver.disconnect();
-  if (activePageObserver) activePageObserver.disconnect();
-  if (infiniteScrollSentinelObserver) infiniteScrollSentinelObserver.disconnect();
-}
-
-function cleanupReaderMemory() {
-  Object.values(currentReadingDecryptedPages).forEach(url => {
-    try {
-      URL.revokeObjectURL(url);
-    } catch (e) {
-      console.warn("Failed to revoke object URL", e);
-    }
-  });
-  currentReadingDecryptedPages = {};
-  chapterGrantsCache = {};
-}
-
-async function loadReaderChapter(chapter) {
-  cleanupReaderMemory();
-  chapterGrantsCache = {};
-  
-  readerMangaTitle.innerText = currentReadingManga.title;
-  readerChapterTitle.innerText = `Chương ${chapter.numberText}${chapter.title ? ` - ${chapter.title}` : ""}`;
-
-  const currentIndex = currentReadingChapterList.findIndex(ch => ch.id === chapter.id);
-  readerPrevChapterBtn.disabled = currentIndex <= 0;
-  readerNextChapterBtn.disabled = currentIndex >= currentReadingChapterList.length - 1;
-
-  readerLoaderText.innerText = "Đang tải danh sách trang truyện...";
-  readerLoader.style.display = "flex";
-  
-  readerPagesScroll.innerHTML = "";
-  readerPagesScroll.style.display = "none";
-  readerPagesFlip.style.display = "none";
-
-  if (activeChapterObserver) activeChapterObserver.disconnect();
-  if (activePageObserver) activePageObserver.disconnect();
-  if (infiniteScrollSentinelObserver) infiniteScrollSentinelObserver.disconnect();
-
-  try {
-    const res = await fetch(`${API_BASE}/chapters/${chapter.id}`);
-    if (!res.ok) {
-      if (res.status === 403) {
-        throw new Error("Chương truyện bị khóa.");
-      }
-      throw new Error(`HTTP Error ${res.status}`);
-    }
-
-    const payload = await res.json();
-    if (!payload.success || !payload.data || !payload.data.pageUrls) {
-      throw new Error("Không lấy được danh sách trang từ API.");
-    }
-
-    const pageUrls = payload.data.pageUrls;
-    currentReadingPageUrls = pageUrls;
-
-    if (pageUrls.length === 0) {
-      throw new Error("Chương này không có trang ảnh nào.");
-    }
-
-    const firstUrl = pageUrls[0] || "";
-    const cleanFirstUrl = firstUrl.split(/[?#]/)[0].toLowerCase();
-    const isImgx = cleanFirstUrl.endsWith(".bin") || cleanFirstUrl.endsWith(".js");
-
-    let pageGrants = {};
-    let isImgxDecryptionRequired = false;
-
-    if (isImgx) {
-      readerLoaderText.innerText = "Chương bảo mật. Đang tải khóa giải mã...";
-      const firstGrantRes = await fetch(`${API_BASE}/chapters/${chapter.id}/page-access`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pageIndexes: [0] })
-      });
-
-      if (firstGrantRes.ok) {
-        const firstGrantPayload = await firstGrantRes.json();
-        if (firstGrantPayload.success && firstGrantPayload.data) {
-          isImgxDecryptionRequired = true;
-          const maxWindow = firstGrantPayload.data.maxWindow || 5;
-
-          if (firstGrantPayload.data.pages && firstGrantPayload.data.pages[0]) {
-            pageGrants[0] = firstGrantPayload.data.pages[0];
-          }
-
-          const remainingIndexes = [];
-          for (let i = 1; i < pageUrls.length; i++) {
-            remainingIndexes.push(i);
-          }
-
-          for (let i = 0; i < remainingIndexes.length; i += maxWindow) {
-            const batch = remainingIndexes.slice(i, i + maxWindow);
-            const batchRes = await fetch(`${API_BASE}/chapters/${chapter.id}/page-access`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ pageIndexes: batch })
-            });
-
-            if (batchRes.ok) {
-              const batchPayload = await batchRes.json();
-              if (batchPayload.success && batchPayload.data && batchPayload.data.pages) {
-                batchPayload.data.pages.forEach(pg => {
-                  pageGrants[pg.pageIndex] = pg;
-                });
-              }
-            }
-          }
-        }
-      }
-    }
-
-    isImgxDecryptionRequiredGlobal = isImgxDecryptionRequired;
-    currentReadingPageGrantsGlobal = pageGrants;
-    chapterGrantsCache[chapter.id] = pageGrants;
-
-    readerLoader.style.display = "none";
-
-    saveReadingProgress(currentReadingManga, chapter);
-
-    if (currentReadingMode === "scroll") {
-      loadAllPagesScrollMode();
-    } else {
-      currentReadingPageIndex = 0;
-      showFlipPage(0);
-    }
-  } catch (err) {
-    readerLoaderText.innerText = `Lỗi: ${err.message}`;
-    const errorMsg = document.createElement("p");
-    errorMsg.style.cssText = "color: var(--danger); margin-top: 10px; font-weight: bold;";
-    errorMsg.innerText = "Không thể mở chương truyện này.";
-    readerLoader.appendChild(errorMsg);
-  }
-}
-
-async function fetchAndDecryptPage(idx, pageUrl, isImgx, pageGrants, chapterId) {
-  const cacheKey = `${chapterId}_${idx}`;
-  if (currentReadingDecryptedPages[cacheKey]) {
-    return currentReadingDecryptedPages[cacheKey];
-  }
-
-  const url = isImgx && pageGrants[idx]
-    ? getProxiedUrl(pageGrants[idx].downloadUrl)
-    : getProxiedUrl(pageUrl);
-
-  const pageRes = await fetch(url);
-  if (!pageRes.ok) throw new Error(`HTTP ${pageRes.status}`);
-
-  let blob = null;
-  if (isImgx && pageGrants[idx]) {
-    const arrayBuffer = await pageRes.arrayBuffer();
-    const uint8 = new Uint8Array(arrayBuffer);
-
-    if (uint8[0] === 0x49 && uint8[1] === 0x4d && uint8[2] === 0x47 && uint8[3] === 0x58) {
-      const decoded = await decodeImgxToWebp(arrayBuffer, pageGrants[idx].grant, pageGrants[idx].storageKey);
-      blob = new Blob([decoded.webp], { type: "image/webp" });
-    } else {
-      const scriptText = new TextDecoder().decode(uint8);
-      const match = scriptText.match(/window\.pages\.push\(\s*["'`](data:[^"'`]+)["'`]\s*\)/);
-      if (!match) {
-        throw new Error("Dữ liệu tải về không chứa chữ ký IMGX và không phải JS Base64.");
-      }
-      blob = dataURLtoBlob(match[1]);
-    }
-  } else {
-    const arrayBuffer = await pageRes.arrayBuffer();
-    const uint8 = new Uint8Array(arrayBuffer);
-    const textContent = new TextDecoder().decode(uint8);
-    const match = textContent.match(/window\.pages\.push\(\s*["'`](data:[^"'`]+)["'`]\s*\)/);
-
-    if (match) {
-      blob = dataURLtoBlob(match[1]);
-    } else {
-      blob = new Blob([arrayBuffer], { type: pageRes.headers.get("Content-Type") || "image/webp" });
-    }
-  }
-
-  const objectUrl = URL.createObjectURL(blob);
-  currentReadingDecryptedPages[cacheKey] = objectUrl;
-  return objectUrl;
-}
-
-function initObservers() {
-  if (activeChapterObserver) activeChapterObserver.disconnect();
-  if (activePageObserver) activePageObserver.disconnect();
-
-  activeChapterObserver = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        const sec = entry.target;
-        const chId = parseInt(sec.dataset.chapterId, 10);
-        const chNumber = sec.dataset.chapterNumber;
-        const chTitle = sec.dataset.chapterTitle;
-
-        readerChapterSelect.value = chId;
-        readerChapterTitle.innerText = `Chương ${chNumber}${chTitle ? ` - ${chTitle}` : ""}`;
-
-        const currentIndex = currentReadingChapterList.findIndex(ch => ch.id === chId);
-        readerPrevChapterBtn.disabled = currentIndex <= 0;
-        readerNextChapterBtn.disabled = currentIndex >= currentReadingChapterList.length - 1;
-
-        const activeChapter = currentReadingChapterList[currentIndex];
-        if (activeChapter && currentReadingChapter.id !== chId) {
-          currentReadingChapter = activeChapter;
-          saveReadingProgress(currentReadingManga, activeChapter);
-        }
-      }
-    });
-  }, {
-    root: readerContentArea,
-    rootMargin: "-20% 0px -60% 0px"
-  });
-
-  activePageObserver = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        const wrapper = entry.target;
-        const idx = parseInt(wrapper.dataset.index, 10);
-        const pUrl = wrapper.dataset.pageUrl;
-        const chId = parseInt(wrapper.dataset.chapterId, 10);
-        const chImgx = wrapper.dataset.isImgx === "true";
-        
-        activePageObserver.unobserve(wrapper);
-
-        const grants = chapterGrantsCache[chId] || {};
-
-        fetchAndDecryptPage(idx, pUrl, chImgx, grants, chId)
-          .then(objectUrl => {
-            wrapper.innerHTML = "";
-            const img = document.createElement("img");
-            img.className = "reader-page-img";
-            img.src = objectUrl;
-            img.alt = `Trang ${idx + 1}`;
-            img.onload = () => img.classList.add("loaded");
-            wrapper.appendChild(img);
-
-            const indicator = document.createElement("span");
-            indicator.style.cssText = "position: absolute; bottom: 10px; right: 10px; font-size: 0.75rem; color: var(--text-muted); background: rgba(0,0,0,0.5); padding: 2px 6px; border-radius: 4px;";
-            indicator.innerText = `${idx + 1} / ${wrapper.dataset.totalPages}`;
-            wrapper.appendChild(indicator);
-
-            const totalPages = parseInt(wrapper.dataset.totalPages, 10);
-            if (idx + 1 < totalPages) {
-              const nextWrapper = wrapper.nextElementSibling;
-              if (nextWrapper && nextWrapper.classList.contains("reader-page-wrapper")) {
-                preDecryptPage(idx + 1, nextWrapper.dataset.pageUrl, chImgx, grants, chId);
-              }
-            }
-          })
-          .catch(err => {
-            console.error(err);
-            wrapper.innerHTML = `
-              <div style="color: var(--danger); text-align: center; padding: 1rem;">
-                <i class="fa-solid fa-triangle-exclamation"></i> Lỗi tải trang: ${err.message}
-              </div>
-            `;
-          });
-      }
-    });
-  }, {
-    root: readerContentArea,
-    rootMargin: "1000px 0px 1000px 0px"
-  });
-}
-
-function loadAllPagesScrollMode() {
-  readerPagesScroll.style.display = "flex";
-  readerPagesFlip.style.display = "none";
-  readerPagesScroll.innerHTML = "";
-
-  const totalPages = currentReadingPageUrls.length;
-  if (totalPages === 0) return;
-
-  const section = document.createElement("div");
-  section.className = "reader-chapter-section";
-  section.dataset.chapterId = currentReadingChapter.id;
-  section.dataset.chapterNumber = currentReadingChapter.numberText;
-  section.dataset.chapterTitle = currentReadingChapter.title || "";
-  readerPagesScroll.appendChild(section);
-
-  initObservers();
-
-  for (let i = 0; i < totalPages; i++) {
-    const wrapper = document.createElement("div");
-    wrapper.className = "reader-page-wrapper";
-    wrapper.dataset.index = i;
-    wrapper.dataset.pageUrl = currentReadingPageUrls[i];
-    wrapper.dataset.chapterId = currentReadingChapter.id;
-    wrapper.dataset.isImgx = isImgxDecryptionRequiredGlobal ? "true" : "false";
-    wrapper.dataset.totalPages = totalPages;
-    wrapper.innerHTML = `
-      <div class="spinner"></div>
-      <span style="position: absolute; bottom: 10px; right: 10px; font-size: 0.75rem; color: var(--text-muted); background: rgba(0,0,0,0.5); padding: 2px 6px; border-radius: 4px;">${i + 1} / ${totalPages}</span>
-    `;
-    section.appendChild(wrapper);
-    activePageObserver.observe(wrapper);
-  }
-
-  activeChapterObserver.observe(section);
-  setupInfiniteScrollSentinel();
-}
-
-function setupInfiniteScrollSentinel() {
-  const oldSentinel = document.getElementById("infinite-scroll-sentinel");
-  if (oldSentinel) oldSentinel.remove();
-
-  if (infiniteScrollSentinelObserver) {
-    infiniteScrollSentinelObserver.disconnect();
-  }
-
-  const sentinel = document.createElement("div");
-  sentinel.id = "infinite-scroll-sentinel";
-  sentinel.style.cssText = "padding: 2rem; text-align: center; color: var(--text-muted); width: 100%; border-top: 1px solid rgba(255, 255, 255, 0.05); font-size: 0.9rem; font-weight: 500;";
-  sentinel.innerHTML = `
-    <div class="infinite-loading-spinner spinner" style="display: none; margin: 0 auto 0.5rem auto;"></div>
-    <span class="infinite-status-text">Kéo tiếp để tải chương tiếp theo</span>
-  `;
-  readerPagesScroll.appendChild(sentinel);
-
-  infiniteScrollSentinelObserver = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting && !isInfiniteLoadingNext) {
-        triggerLoadNextChapterInfinite();
-      }
-    });
-  }, {
-    root: readerContentArea,
-    rootMargin: "200px"
-  });
-
-  infiniteScrollSentinelObserver.observe(sentinel);
-}
-
-async function triggerLoadNextChapterInfinite() {
-  const currentIndex = currentReadingChapterList.findIndex(ch => ch.id === currentReadingChapter.id);
-  if (currentIndex >= currentReadingChapterList.length - 1) {
-    const statusText = document.querySelector("#infinite-scroll-sentinel .infinite-status-text");
-    if (statusText) statusText.innerText = "Đã đọc hết chương mới nhất!";
-    return;
-  }
-
-  const nextChapter = currentReadingChapterList[currentIndex + 1];
-  isInfiniteLoadingNext = true;
-
-  const spinner = document.querySelector("#infinite-scroll-sentinel .infinite-loading-spinner");
-  const statusText = document.querySelector("#infinite-scroll-sentinel .infinite-status-text");
-  if (spinner) spinner.style.display = "block";
-  if (statusText) statusText.innerText = `Đang tải Chương ${nextChapter.numberText}...`;
-
-  try {
-    const res = await fetch(`${API_BASE}/chapters/${nextChapter.id}`);
-    if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
-
-    const payload = await res.json();
-    if (!payload.success || !payload.data || !payload.data.pageUrls) {
-      throw new Error("Không tải được danh sách trang.");
-    }
-
-    const pageUrls = payload.data.pageUrls;
-    if (pageUrls.length === 0) throw new Error("Chương không có trang nào.");
-
-    const firstUrl = pageUrls[0] || "";
-    const cleanFirstUrl = firstUrl.split(/[?#]/)[0].toLowerCase();
-    const isImgx = cleanFirstUrl.endsWith(".bin") || cleanFirstUrl.endsWith(".js");
-
-    let pageGrants = {};
-    if (isImgx) {
-      const firstGrantRes = await fetch(`${API_BASE}/chapters/${nextChapter.id}/page-access`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pageIndexes: [0] })
-      });
-
-      if (firstGrantRes.ok) {
-        const firstGrantPayload = await firstGrantRes.json();
-        if (firstGrantPayload.success && firstGrantPayload.data) {
-          const maxWindow = firstGrantPayload.data.maxWindow || 5;
-          if (firstGrantPayload.data.pages && firstGrantPayload.data.pages[0]) {
-            pageGrants[0] = firstGrantPayload.data.pages[0];
-          }
-
-          const remainingIndexes = [];
-          for (let i = 1; i < pageUrls.length; i++) remainingIndexes.push(i);
-
-          for (let i = 0; i < remainingIndexes.length; i += maxWindow) {
-            const batch = remainingIndexes.slice(i, i + maxWindow);
-            const batchRes = await fetch(`${API_BASE}/chapters/${nextChapter.id}/page-access`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ pageIndexes: batch })
-            });
-
-            if (batchRes.ok) {
-              const batchPayload = await batchRes.json();
-              if (batchPayload.success && batchPayload.data && batchPayload.data.pages) {
-                batchPayload.data.pages.forEach(pg => {
-                  pageGrants[pg.pageIndex] = pg;
-                });
-              }
-            }
-          }
-        }
-      }
-    }
-
-    chapterGrantsCache[nextChapter.id] = pageGrants;
-
-    const sentinel = document.getElementById("infinite-scroll-sentinel");
-    const section = document.createElement("div");
-    section.className = "reader-chapter-section";
-    section.dataset.chapterId = nextChapter.id;
-    section.dataset.chapterNumber = nextChapter.numberText;
-    section.dataset.chapterTitle = nextChapter.title || "";
-
-    readerPagesScroll.insertBefore(section, sentinel);
-
-    const totalPages = pageUrls.length;
-    for (let i = 0; i < totalPages; i++) {
-      const wrapper = document.createElement("div");
-      wrapper.className = "reader-page-wrapper";
-      wrapper.dataset.index = i;
-      wrapper.dataset.pageUrl = pageUrls[i];
-      wrapper.dataset.chapterId = nextChapter.id;
-      wrapper.dataset.isImgx = isImgx ? "true" : "false";
-      wrapper.dataset.totalPages = totalPages;
-      wrapper.innerHTML = `
-        <div class="spinner"></div>
-        <span style="position: absolute; bottom: 10px; right: 10px; font-size: 0.75rem; color: var(--text-muted); background: rgba(0,0,0,0.5); padding: 2px 6px; border-radius: 4px;">${i + 1} / ${totalPages}</span>
-      `;
-      section.appendChild(wrapper);
-      activePageObserver.observe(wrapper);
-    }
-
-    activeChapterObserver.observe(section);
-
-    if (spinner) spinner.style.display = "none";
-    if (statusText) statusText.innerText = "Kéo tiếp để tải chương tiếp theo";
-  } catch (err) {
-    console.error(err);
-    if (spinner) spinner.style.display = "none";
-    if (statusText) statusText.innerText = `Lỗi tải chương tiếp theo: ${err.message}. Thử lại...`;
-  } finally {
-    isInfiniteLoadingNext = false;
-  }
-}
-
-async function showFlipPage(index) {
-  readerPagesScroll.style.display = "none";
-  readerPagesFlip.style.display = "flex";
-
-  const totalPages = currentReadingPageUrls.length;
-  if (totalPages === 0) {
-    flipImage.style.display = "none";
-    flipPageIndicator.innerText = "Trang 0 / 0";
-    return;
-  }
-
-  currentReadingPageIndex = index;
-  flipPageIndicator.innerText = `Trang ${index + 1} / ${totalPages}`;
-  flipImage.style.display = "none";
-
-  let pageLoader = readerPagesFlip.querySelector(".page-flip-loader");
-  if (!pageLoader) {
-    pageLoader = document.createElement("div");
-    pageLoader.className = "page-flip-loader spinner";
-    pageLoader.style.cssText = "position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);";
-    readerPagesFlip.appendChild(pageLoader);
-  }
-  pageLoader.style.display = "block";
-
-  try {
-    const grants = chapterGrantsCache[currentReadingChapter.id] || {};
-    const objectUrl = await fetchAndDecryptPage(index, currentReadingPageUrls[index], isImgxDecryptionRequiredGlobal, grants, currentReadingChapter.id);
-    flipImage.src = objectUrl;
-    flipImage.style.display = "block";
-    pageLoader.style.display = "none";
-
-    if (index + 1 < totalPages) {
-      preDecryptPage(index + 1, currentReadingPageUrls[index + 1], isImgxDecryptionRequiredGlobal, grants, currentReadingChapter.id);
-    }
-    if (index + 2 < totalPages) {
-      preDecryptPage(index + 2, currentReadingPageUrls[index + 2], isImgxDecryptionRequiredGlobal, grants, currentReadingChapter.id);
-    }
-    if (index - 1 >= 0) {
-      preDecryptPage(index - 1, currentReadingPageUrls[index - 1], isImgxDecryptionRequiredGlobal, grants, currentReadingChapter.id);
-    }
-  } catch (err) {
-    console.error(err);
-    pageLoader.style.display = "none";
-    flipPageIndicator.innerText = `Lỗi tải trang ${index + 1}`;
-  }
-}
-
-function preDecryptPage(index, pageUrl, isImgx, pageGrants, chapterId) {
-  const cacheKey = `${chapterId}_${index}`;
-  if (!currentReadingDecryptedPages[cacheKey]) {
-    fetchAndDecryptPage(index, pageUrl, isImgx, pageGrants, chapterId)
-      .catch(err => console.warn("Background prefetch failed for page index " + index, err));
-  }
-}
-
-function goToPrevChapter() {
-  const currentIndex = currentReadingChapterList.findIndex(ch => ch.id === currentReadingChapter.id);
-  if (currentIndex > 0) {
-    const prevChapter = currentReadingChapterList[currentIndex - 1];
-    currentReadingChapter = prevChapter;
-    readerChapterSelect.value = prevChapter.id;
-    loadReaderChapter(prevChapter);
-  }
-}
-
-function goToNextChapter() {
-  const currentIndex = currentReadingChapterList.findIndex(ch => ch.id === currentReadingChapter.id);
-  if (currentIndex < currentReadingChapterList.length - 1) {
-    const nextChapter = currentReadingChapterList[currentIndex + 1];
-    currentReadingChapter = nextChapter;
-    readerChapterSelect.value = nextChapter.id;
-    loadReaderChapter(nextChapter);
-  } else {
-    alert("Bạn đã đọc tới chương mới nhất!");
-  }
-}
-
-// Reader Event Listeners
-readerBackBtn.addEventListener("click", closeReader);
-readerPrevChapterBtn.addEventListener("click", goToPrevChapter);
-readerNextChapterBtn.addEventListener("click", goToNextChapter);
-
-readerChapterSelect.addEventListener("change", () => {
-  const chId = parseInt(readerChapterSelect.value, 10);
-  const chapter = currentReadingChapterList.find(c => c.id === chId);
-  if (chapter) {
-    currentReadingChapter = chapter;
-    loadReaderChapter(chapter);
-  }
-});
-
-readerModeScrollBtn.addEventListener("click", () => {
-  if (currentReadingMode === "scroll") return;
-  currentReadingMode = "scroll";
-  readerModeScrollBtn.classList.add("active");
-  readerModePageBtn.classList.remove("active");
-  loadAllPagesScrollMode();
-});
-
-readerModePageBtn.addEventListener("click", () => {
-  if (currentReadingMode === "page") return;
-  currentReadingMode = "page";
-  readerModePageBtn.classList.add("active");
-  readerModeScrollBtn.classList.remove("active");
-  showFlipPage(0);
-});
-
-flipPrevBtn.addEventListener("click", () => {
-  if (currentReadingPageIndex > 0) {
-    showFlipPage(currentReadingPageIndex - 1);
-  } else {
-    goToPrevChapter();
-  }
-});
-
-flipNextBtn.addEventListener("click", () => {
-  if (currentReadingPageIndex < currentReadingPageUrls.length - 1) {
-    showFlipPage(currentReadingPageIndex + 1);
-  } else {
-    goToNextChapter();
-  }
-});
-
-// Touch Swipes on Mobile (Page Flip Mode)
-let touchStartX = 0;
-let touchEndX = 0;
-
-readerPagesFlip.addEventListener("touchstart", (e) => {
-  touchStartX = e.changedTouches[0].screenX;
-}, { passive: true });
-
-readerPagesFlip.addEventListener("touchend", (e) => {
-  touchEndX = e.changedTouches[0].screenX;
-  handleSwipeGesture();
-}, { passive: true });
-
-function handleSwipeGesture() {
-  const diff = touchEndX - touchStartX;
-  if (Math.abs(diff) < 50) return;
-
-  if (diff > 0) {
-    if (currentReadingPageIndex > 0) {
-      showFlipPage(currentReadingPageIndex - 1);
-    } else {
-      goToPrevChapter();
-    }
-  } else {
-    if (currentReadingPageIndex < currentReadingPageUrls.length - 1) {
-      showFlipPage(currentReadingPageIndex + 1);
-    } else {
-      goToNextChapter();
-    }
-  }
-}
-
-// Keyboard controls
-window.addEventListener("keydown", (e) => {
-  if (!readerView.classList.contains("active")) return;
-
-  if (e.key === "Escape") {
-    closeReader();
-  } else if (e.key === "ArrowLeft") {
-    if (currentReadingMode === "page") {
-      if (currentReadingPageIndex > 0) {
-        showFlipPage(currentReadingPageIndex - 1);
-      } else {
-        goToPrevChapter();
-      }
-    }
-  } else if (e.key === "ArrowRight") {
-    if (currentReadingMode === "page") {
-      if (currentReadingPageIndex < currentReadingPageUrls.length - 1) {
-        showFlipPage(currentReadingPageIndex + 1);
-      } else {
-        goToNextChapter();
-      }
-    }
-  }
-});
-
-// Theme Select Event Listener
-readerThemeSelect.addEventListener("change", () => {
-  const selected = readerThemeSelect.value;
-  readerView.className = `reader-view active ${selected}`;
-  localStorage.setItem("reader-theme", selected);
-});
-
-// ── Reader UI Auto-hide (double-tap center to toggle) ──────────────────────
-const readerTapHint = document.getElementById("reader-tap-hint");
-let readerUiHidden = false;
-let tapHintTimer = null;
-let lastTapTime = 0;
-let autoHideTimer = null;
-
-function showReaderUi() {
-  readerUiHidden = false;
-  readerView.classList.remove("ui-hidden");
-  resetAutoHide();
-}
-
-function hideReaderUi() {
-  readerUiHidden = true;
-  readerView.classList.add("ui-hidden");
-  showTapHint();
-  if (autoHideTimer) clearTimeout(autoHideTimer);
-}
-
-function showTapHint() {
-  if (!readerTapHint) return;
-  readerTapHint.classList.add("visible");
-  if (tapHintTimer) clearTimeout(tapHintTimer);
-  tapHintTimer = setTimeout(() => {
-    readerTapHint.classList.remove("visible");
-  }, 2000);
-}
-
-function resetAutoHide() {
-  if (autoHideTimer) clearTimeout(autoHideTimer);
-  // Auto-hide after 4 seconds of no interaction
-  autoHideTimer = setTimeout(() => {
-    if (readerView.classList.contains("active")) {
-      hideReaderUi();
-    }
-  }, 4000);
-}
-
-// Touch: double-tap center 1/3 of screen to toggle
-readerView.addEventListener("touchend", (e) => {
-  const now = Date.now();
-  const touch = e.changedTouches[0];
-  const screenW = window.innerWidth;
-  const screenH = window.innerHeight;
-  // Only trigger for taps in the center horizontal third
-  const inCenterX = touch.clientX > screenW * 0.25 && touch.clientX < screenW * 0.75;
-  const inCenterY = touch.clientY > screenH * 0.2 && touch.clientY < screenH * 0.8;
-
-  if (inCenterX && inCenterY) {
-    if (now - lastTapTime < 320) {
-      // Double-tap detected
-      if (readerUiHidden) {
-        showReaderUi();
-      } else {
-        hideReaderUi();
-      }
-      lastTapTime = 0;
-    } else {
-      lastTapTime = now;
-      // Single tap: if hidden, show the hint
-      if (readerUiHidden) {
-        showTapHint();
-      }
-    }
-  } else {
-    // Tap outside center area (e.g. on header buttons) — show UI
-    if (readerUiHidden) showReaderUi();
-  }
-}, { passive: true });
-
-// Mouse click (PC): single click center to toggle
-readerContentArea.addEventListener("click", (e) => {
-  // Don't trigger if clicking on interactive elements
-  if (e.target.closest("button, select, a, input")) return;
-  const screenW = window.innerWidth;
-  const inCenterX = e.clientX > screenW * 0.25 && e.clientX < screenW * 0.75;
-  if (inCenterX) {
-    if (readerUiHidden) showReaderUi(); else hideReaderUi();
-  }
-});
-
-
-
-// Reading History Functions
-function saveReadingProgress(manga, chapter) {
-  if (!manga || !chapter) return;
-
-  let history = [];
-  try {
-    history = JSON.parse(localStorage.getItem("manga-reading-history")) || [];
-  } catch (e) {
-    history = [];
-  }
-
-  const item = {
-    mangaId: manga.id,
-    title: manga.title,
-    coverUrl: manga.coverUrl,
-    author: manga.author,
-    chapterId: chapter.id,
-    chapterNumber: chapter.numberText,
-    chapterTitle: chapter.title,
-    timestamp: Date.now()
-  };
-
-  history = history.filter(h => h.mangaId !== manga.id);
-  history.unshift(item);
-
-  if (history.length > 5) {
-    history = history.slice(0, 5);
-  }
-
-  localStorage.setItem("manga-reading-history", JSON.stringify(history));
-  renderRecentReading();
-}
-
-function renderRecentReading() {
-  if (!recentSection || !recentGrid) return;
-
-  let history = [];
-  try {
-    history = JSON.parse(localStorage.getItem("manga-reading-history")) || [];
-  } catch (e) {
-    history = [];
-  }
-
-  if (history.length === 0) {
-    recentSection.style.display = "none";
-    return;
-  }
-
-  recentSection.style.display = "block";
-  recentGrid.innerHTML = history.map(item => {
-    const timeString = new Date(item.timestamp).toLocaleDateString("vi-VN") + " " + new Date(item.timestamp).toLocaleTimeString("vi-VN", {hour: '2-digit', minute:'2-digit'});
-    const coverSrc = item.coverUrl || "https://placehold.co/200x280/161e31/ffffff?text=No+Cover";
-    return `
-      <div class="recent-card" data-manga-id="${item.mangaId}" data-chapter-id="${item.chapterId}">
-        <button class="recent-remove-btn" data-manga-id="${item.mangaId}" title="Xóa khỏi lịch sử">
-          <i class="fa-solid fa-xmark"></i>
-        </button>
-        <div class="recent-cover-wrapper">
-          <img src="${coverSrc}" class="recent-cover" alt="${item.title}" loading="lazy">
-        </div>
-        <div class="recent-details">
-          <h4 class="recent-title" title="${item.title}">${item.title}</h4>
-          <div class="recent-chapter">Đang đọc: Ch. ${item.chapterNumber}</div>
-          <div class="recent-time"><i class="fa-regular fa-clock"></i> ${timeString}</div>
-        </div>
-      </div>
-    `;
-  }).join("");
-
-  recentGrid.querySelectorAll(".recent-card").forEach(card => {
-    card.addEventListener("click", async (e) => {
-      if (e.target.closest(".recent-remove-btn")) return;
-
-      const mangaId = parseInt(card.dataset.mangaId, 10);
-      const chapterId = parseInt(card.dataset.chapterId, 10);
-
-      const historyItem = history.find(h => h.mangaId === mangaId);
-      if (!historyItem) return;
-
-      card.style.opacity = "0.7";
-      card.style.pointerEvents = "none";
-      try {
-        const mangaObj = {
-          id: mangaId,
-          title: historyItem.title,
-          coverUrl: historyItem.coverUrl,
-          author: historyItem.author
-        };
-        const chapters = await fetchAllChapters(mangaId);
-        chapters.forEach(ch => {
-          ch.numberText = formatChapterNumber(ch.numberText);
-        });
-        chapters.sort((a, b) => a.number - b.number);
-
-        const chapter = chapters.find(ch => ch.id === chapterId);
-        if (chapter) {
-          selectedManga = mangaObj;
-          openReader(mangaObj, chapter, chapters);
-        } else {
-          alert("Không tìm thấy chương truyện này nữa. Có thể đã bị xóa.");
-        }
-      } catch (err) {
-        alert("Lỗi tải thông tin chương truyện: " + err.message);
-      } finally {
-        card.style.opacity = "";
-        card.style.pointerEvents = "";
-      }
-    });
-  });
-
-  recentGrid.querySelectorAll(".recent-remove-btn").forEach(btn => {
-    btn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const mangaId = parseInt(btn.dataset.mangaId, 10);
-      removeRecentReading(mangaId);
-    });
-  });
-}
-
-function removeRecentReading(mangaId) {
-  let history = [];
-  try {
-    history = JSON.parse(localStorage.getItem("manga-reading-history")) || [];
-  } catch (e) {
-    history = [];
-  }
-  history = history.filter(h => h.mangaId !== mangaId);
-  localStorage.setItem("manga-reading-history", JSON.stringify(history));
-  renderRecentReading();
-}
-
-clearHistoryBtn.addEventListener("click", () => {
-  if (confirm("Bạn có chắc chắn muốn xóa toàn bộ lịch sử đọc truyện?")) {
-    localStorage.removeItem("manga-reading-history");
-    renderRecentReading();
-  }
-});
-
-// Initialize Recent Reading and Theme on load
-(function initReaderPreferences() {
-  const theme = localStorage.getItem("reader-theme") || "theme-dark";
-  if (readerThemeSelect) readerThemeSelect.value = theme;
-  if (readerView) readerView.className = `reader-view ${theme}`;
-  renderRecentReading();
-
-  // Initialize Custom Proxy input
+// Initialize on load
+(function init() {
   const proxyInput = document.getElementById("proxy-input");
   if (proxyInput) {
     proxyInput.value = localStorage.getItem("custom-proxy-url") || "";
@@ -2102,10 +1151,8 @@ clearHistoryBtn.addEventListener("click", () => {
       } else {
         localStorage.removeItem("custom-proxy-url");
       }
-      log("Đã cập nhật Proxy/API Base. Đang làm mới trang...", "system");
-      setTimeout(() => {
-        window.location.reload();
-      }, 1000);
+      log("ÄÃ£ cáº­p nháº­t Proxy. Äang lÃ m má»›i trang...", "system");
+      setTimeout(() => { window.location.reload(); }, 1000);
     });
   }
 })();

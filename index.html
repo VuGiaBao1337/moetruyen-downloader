@@ -19,7 +19,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
 
-  <link rel="stylesheet" href="index.css?v=3">
+  <link rel="stylesheet" href="index.css?v=4">
 </head>
 <body>
 
@@ -60,17 +60,6 @@
         <span class="results-count" id="results-count-text">Tìm thấy 0 truyện</span>
         <button id="clear-results-btn" class="btn btn-text-only"><i class="fa-solid fa-xmark"></i> Xóa kết quả</button>
       </div>
-
-      <!-- Recent Reading Section -->
-      <section class="recent-reading-section" id="recent-reading-section" style="display: none;">
-        <div class="recent-reading-header">
-          <h3><i class="fa-solid fa-clock-rotate-left"></i> Đọc tiếp gần đây</h3>
-          <button id="clear-history-btn" class="btn btn-text-only"><i class="fa-solid fa-trash-can"></i> Xóa lịch sử</button>
-        </div>
-        <div class="recent-grid" id="recent-reading-grid">
-          <!-- Injected dynamically -->
-        </div>
-      </section>
 
       <section class="welcome-banner" id="welcome-banner">
         <div class="banner-content">
@@ -206,79 +195,6 @@
   </div>
 
 
-  <!-- Immersive Manga Reader View -->
-  <div class="reader-view" id="manga-reader-view">
-    <div class="reader-header">
-      <div class="reader-header-left">
-        <button id="reader-back-btn" class="btn btn-secondary btn-icon-only" title="Quay lại">
-          <i class="fa-solid fa-arrow-left"></i>
-        </button>
-        <div class="reader-title-info">
-          <h2 id="reader-manga-title">Tên truyện</h2>
-          <span id="reader-chapter-title">Chương...</span>
-        </div>
-      </div>
-
-      <div class="reader-header-center">
-        <button id="reader-prev-chapter-btn" class="btn btn-secondary btn-icon-only" title="Chương trước">
-          <i class="fa-solid fa-chevron-left"></i>
-        </button>
-        <select id="reader-chapter-select" class="reader-chapter-select">
-          <!-- Populated dynamically -->
-        </select>
-        <button id="reader-next-chapter-btn" class="btn btn-secondary btn-icon-only" title="Chương sau">
-          <i class="fa-solid fa-chevron-right"></i>
-        </button>
-      </div>
-
-      <div class="reader-header-right">
-        <div class="reader-theme-selector" style="margin-right: 12px;">
-          <select id="reader-theme-select" class="reader-theme-select" title="Đổi màu nền">
-            <option value="theme-dark" selected>Nền Tối</option>
-            <option value="theme-oled">Nền OLED</option>
-            <option value="theme-sepia">Nền Giấy</option>
-          </select>
-        </div>
-        <div class="reader-mode-toggle">
-          <button id="reader-mode-scroll-btn" class="btn btn-secondary active" title="Cuộn dọc (Webtoon)">
-            <i class="fa-solid fa-arrows-up-down"></i>
-          </button>
-          <button id="reader-mode-page-btn" class="btn btn-secondary" title="Lật trang">
-            <i class="fa-solid fa-book-open"></i>
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Reader Main Content Area -->
-    <div class="reader-content-area" id="reader-content-area">
-      <!-- Loading Overlay -->
-      <div id="reader-loader" class="reader-loader">
-        <div class="spinner"></div>
-        <p id="reader-loader-text">Đang tải và giải mã các trang truyện...</p>
-      </div>
-
-      <!-- Scroll Mode Pages Container -->
-      <div id="reader-pages-scroll" class="reader-pages-scroll">
-        <!-- Injected dynamically -->
-      </div>
-
-      <!-- Page Flip Mode Container -->
-      <div id="reader-pages-flip" class="reader-pages-flip" style="display: none;">
-        <button id="flip-prev-btn" class="flip-nav-btn prev" title="Trang trước"><i class="fa-solid fa-chevron-left"></i></button>
-        <div class="flip-image-wrapper">
-          <img id="flip-image" src="" alt="Manga Page">
-        </div>
-        <button id="flip-next-btn" class="flip-nav-btn next" title="Trang sau"><i class="fa-solid fa-chevron-right"></i></button>
-        <div class="flip-page-indicator" id="flip-page-indicator">Trang 0 / 0</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Double-tap hint overlay for mobile -->
-  <div class="reader-tap-hint" id="reader-tap-hint">Chạm đôi để hiện thanh điều hướng</div>
-
-
-  <script src="app.js?v=2"></script>
+  <script src="app.js?v=3"></script>
 </body>
 </html>
