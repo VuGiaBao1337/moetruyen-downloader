@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MoeTruyen Downloader</title>
+  <meta name="description" content="Một ứng dụng tải truyện tranh trực tuyến từ MoeTruyen API với giao diện hiện đại và tốc độ cao.">
+
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+
+
+  <link rel="stylesheet" href="index.css?v=2">
+</head>
+<body>
+
+  <div class="glow-bg">
+    <div class="glow-circle gc-1"></div>
+    <div class="glow-circle gc-2"></div>
+  </div>
+
+  <div class="app-container">
+
+    <header class="app-header">
+      <div class="logo">
+        <i class="fa-solid fa-spider icon-logo"></i>
+        <h1>MoeTruyen <span>Downloader</span></h1>
+      </div>
+      <div class="search-bar-container">
+        <div class="search-wrapper">
+          <i class="fa-solid fa-magnifying-glass search-icon"></i>
+          <input type="text" id="search-input" placeholder="Tìm tên truyện tranh..." autocomplete="off">
+          <button id="search-btn" class="btn btn-primary">
+            <span class="btn-text">Tìm kiếm</span>
+            <i class="fa-solid fa-arrow-right"></i>
+          </button>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button id="show-queue-btn" class="btn btn-secondary btn-icon-only" title="Trạng thái tải">
+          <i class="fa-solid fa-download"></i>
+          <span class="badge" id="queue-badge" style="display: none;">0</span>
+        </button>
+      </div>
+    </header>
+
+
+    <main class="main-content">
+
+      <div class="results-header" id="results-header" style="display: none;">
+        <span class="results-count" id="results-count-text">Tìm thấy 0 truyện</span>
+        <button id="clear-results-btn" class="btn btn-text-only"><i class="fa-solid fa-xmark"></i> Xóa kết quả</button>
+      </div>
+
+
+      <section class="welcome-banner" id="welcome-banner">
+        <div class="banner-content">
+          <h2>Tải Truyện Từ MoeTruyen Dễ Dàng</h2>
+          <p>Tìm kiếm và tải về những bộ truyện yêu thích của bạn dưới dạng ảnh chất lượng cao WebP được nén sẵn thành tệp ZIP hoàn toàn trên trình duyệt của bạn.</p>
+          <div class="featured-tags">
+            <span class="tag"><i class="fa-solid fa-bolt"></i> Tốc độ cao</span>
+            <span class="tag"><i class="fa-solid fa-shield-halved"></i> Không quảng cáo</span>
+            <span class="tag"><i class="fa-solid fa-folder-open"></i> Lưu trữ ZIP gọn gàng</span>
+          </div>
+        </div>
+      </section>
+
+
+      <section class="manga-grid" id="manga-grid">
+
+      </section>
+
+
+      <div class="loader-container" id="main-loader" style="display: none;">
+        <div class="spinner"></div>
+        <p>Đang tìm dữ liệu truyện...</p>
+      </div>
+    </main>
+
+
+    <div class="drawer-overlay" id="drawer-overlay"></div>
+    <div class="drawer" id="manga-drawer">
+      <button class="drawer-close" id="drawer-close-btn">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+
+      <div class="drawer-content" id="drawer-content">
+
+      </div>
+    </div>
+
+
+    <div class="queue-panel" id="queue-panel">
+      <div class="queue-header">
+        <h3><i class="fa-solid fa-circle-down"></i> Tiến trình tải về</h3>
+        <button class="queue-close" id="queue-close-btn"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="queue-settings">
+        <h4>Cài đặt</h4>
+        <div class="setting-item">
+          <label for="concurrency-select">Tải song song:</label>
+          <select id="concurrency-select">
+            <option value="1">1 chapter</option>
+            <option value="2" selected>2 chapters</option>
+            <option value="3">3 chapters</option>
+          </select>
+        </div>
+        <div class="setting-item" style="margin-top: 8px;">
+          <label for="format-select">Định dạng lưu:</label>
+          <select id="format-select">
+            <option value="png" selected>PNG (Mở được ngay)</option>
+            <option value="webp">WebP (Dung lượng nhẹ)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="queue-list" id="queue-items-container">
+        <div class="empty-queue-msg">
+          <i class="fa-solid fa-box-open"></i>
+          <p>Không có lượt tải nào đang chạy</p>
+        </div>
+      </div>
+
+      <div class="log-console">
+        <div class="log-header">
+          <span>Logs hệ thống</span>
+          <button id="clear-logs-btn" class="btn-log-clear">Xóa</button>
+        </div>
+        <div class="log-body" id="log-body-container">
+          <div class="log-line system">MoeTruyen Downloader sẵn sàng.</div>
+        </div>
+      </div>
+    </div>
+
+
+    <footer class="app-footer">
+      <p>&copy; 2026 MoeTruyen Downloader</p>
+    </footer>
+  </div>
+
+
+  <div class="modal-overlay" id="confirm-modal-overlay"></div>
+  <div class="modal" id="confirm-download-modal">
+    <div class="modal-header">
+      <h3><i class="fa-solid fa-circle-question"></i> Xác nhận lượt tải</h3>
+      <button class="modal-close" id="confirm-modal-close-btn"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="confirm-manga-info">
+        <h4 id="confirm-manga-title">Tên truyện</h4>
+        <p id="confirm-chapters-count">Đã chọn 0 chương</p>
+        <div id="confirm-chapters-list" class="confirm-chapters-list">
+
+        </div>
+      </div>
+
+      <div class="modal-settings">
+        <h4>Cài đặt tải</h4>
+        <div class="setting-row">
+          <label for="modal-concurrency-select">Tải song song:</label>
+          <select id="modal-concurrency-select">
+            <option value="1">1 chapter</option>
+            <option value="2" selected>2 chapters</option>
+            <option value="3">3 chapters</option>
+          </select>
+        </div>
+        <div class="setting-row" style="margin-top: 8px;">
+          <label for="modal-format-select">Định dạng lưu:</label>
+          <select id="modal-format-select">
+            <option value="png" selected>PNG (Độ tương thích cao)</option>
+            <option value="webp">WebP (Dung lượng nhẹ)</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button id="confirm-cancel-btn" class="btn btn-secondary">Hủy</button>
+      <button id="confirm-start-btn" class="btn btn-primary">
+        <i class="fa-solid fa-download"></i> Bắt đầu tải
+      </button>
+    </div>
+  </div>
+
+
+  <script src="app.js?v=2"></script>
+</body>
+</html>
