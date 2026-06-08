@@ -18,6 +18,8 @@ const API_BASE = customProxyUrl
   ? customProxyUrl.replace(/\/$/, "") + "/api/v2"
   : (isLocalServer ? "/api/v2" : "https://moe.suicaodex.com/v2");
 
+console.log("MoeTruyen Downloader Init - isLocalServer:", isLocalServer, "API_BASE:", API_BASE);
+
 function getProxiedUrl(originalUrl) {
   if (customProxyUrl) {
     if (originalUrl && originalUrl.startsWith("https://")) {
